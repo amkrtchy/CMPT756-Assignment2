@@ -1,0 +1,44 @@
+ASSIGNMENT2
+
+
+
+-----------------
+INPUT
+-----------------
+File is run on two images: 
+     - small image (~2MB) provided in.ppm provided with the assignment 
+     - large image (~200MB) available at http://cmpt-886.sfucloud.ca/in.ppm-70mp.zip
+Manually set the filename in the main() function
+
+-----------------
+OUTPUT
+-----------------
+Program ouputs converted images:
+	- out_yuv_gpu.yuv & out_rgb_gpu.ppm for the GPU conversion
+	- out_yuv_cpu.yuv & out_rgb_cpu.ppm for the CPU conversion (currently commented out, uncomment corresponding code sections to view)
+
+-----------------
+THREADS PER BLOCK
+-----------------
+	Parameter M sets threads per block in our program and is hardcoded. 
+	Change it in the rgb2yuvGPU() and yuv2rgbGPU() functions to the desired value
+
+
+
+-----------------
+COMPILE AND RUN
+-----------------	
+    - We require cuda 9.1 to compile our program. Change Makefile for different versions. 
+    - Compile the program with make
+    - Run the program via ./mycode 
+
+
+
+
+-------------------
+EXPERIEMTNS & TIMES
+-------------------
+
+
+
+
