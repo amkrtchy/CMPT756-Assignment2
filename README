@@ -6,7 +6,7 @@ ASSIGNMENT2
 INPUT
 -----------------
 File is run on two images: 
-     - small image (~2MB) provided in.ppm provided with the assignment 
+     - small image (~2MB) in.ppm provided with the assignment 
      - large image (~200MB) available at http://cmpt-886.sfucloud.ca/in.ppm-70mp.zip
 Manually set the filename in the main() function
 
@@ -20,7 +20,7 @@ Program ouputs converted images:
 -----------------
 THREADS PER BLOCK
 -----------------
-	Parameter M sets threads per block in our program and is hardcoded. 
+	Parameter M sets threads per block in our program and is hardcoded in colour-convert.cu. 
 	Change it in the rgb2yuvGPU() and yuv2rgbGPU() functions to the desired value
 
 
