@@ -1,6 +1,6 @@
 # Build tools
 CFLAGS= -I/usr/local/cuda-9.1/samples/common/inc
-NVCC = /usr/local/cuda/bin/nvcc
+NVCC = /usr/local/cuda-9.1/bin/nvcc
 
 
 # here are all the objects

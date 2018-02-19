@@ -4,11 +4,12 @@
 #include "colour-convert.h"
 
 
-// AM: empy kernel to fire up GPU
+// Empy kernel to fire up GPU
 __global__ void emptyKernel(void) {
 
 }
 
+// RGB 2 YUV kernel
 __global__ void rgb2yuvKernel(unsigned char *r, unsigned char *g, unsigned char *b, unsigned char *y, 
                               unsigned char *u, unsigned char *v, int *n) {
 
@@ -27,6 +28,7 @@ __global__ void rgb2yuvKernel(unsigned char *r, unsigned char *g, unsigned char 
 
 }
 
+// YUV 2 RGB kernel
 __global__ void yuv2rgbKernel(unsigned char *r, unsigned char *g, unsigned char *b, 
                               unsigned char *y, unsigned char *u, unsigned char *v, int *n) {
 
@@ -59,16 +61,16 @@ __global__ void yuv2rgbKernel(unsigned char *r, unsigned char *g, unsigned char 
 
 }
 
+
 void launchEmptyKernel() {
 
     emptyKernel<<<1, 1>>>();
 }
 
-// AM copy image to device
 
 void copyToDevice(PPM_IMG img_in) { 
     
- // AM: Allocate memory for the PPM_IMG & YUV_IMG on the device
+    // Allocate memory for the PPM_IMG
     unsigned char * img_r_d;
     unsigned char * img_g_d;
     unsigned char * img_b_d;
@@ -85,10 +87,16 @@ void copyToDevice(PPM_IMG img_in) {
     cudaMemcpy(img_g_d, img_in.img_g, size, cudaMemcpyHostToDevice);
     cudaMemcpy(img_b_d, img_in.img_b, size, cudaMemcpyHostToDevice);
 
+    cudaFree(img_r_d);
+    cudaFree(img_g_d);
+    cudaFree(img_b_d);
+
+
 }
 
 void copyToDeviceAndBack(PPM_IMG img_in) { 
-    // AM: Allocate memory for the PPM_IMG & YUV_IMG on the device
+
+    // Allocate memory for the PPM_IMG on the device
     unsigned char * img_r_d;
     unsigned char * img_g_d;
     unsigned char * img_b_d;
@@ -130,7 +138,7 @@ YUV_IMG rgb2yuvGPU(PPM_IMG img_in)
     img_out.img_u = (unsigned char *)malloc(sizeof(unsigned char)*img_out.w*img_out.h);
     img_out.img_v = (unsigned char *)malloc(sizeof(unsigned char)*img_out.w*img_out.h);
 
-    // AM: Allocate memory for the PPM_IMG & YUV_IMG on the device
+    // Allocate memory for the PPM_IMG & YUV_IMG on the device
     unsigned char * img_r_d;
     unsigned char * img_g_d;
     unsigned char * img_b_d;
@@ -159,7 +167,7 @@ YUV_IMG rgb2yuvGPU(PPM_IMG img_in)
     cudaMemcpy(img_b_d, img_in.img_b, size, cudaMemcpyHostToDevice);
 
     int N = img_in.w*img_in.h;
-    int M = 8;
+    int M = 512; // number of threads
 
     cudaMemcpy(N_d, &N, sizeof(int), cudaMemcpyHostToDevice);
 
@@ -188,7 +196,7 @@ YUV_IMG rgb2yuvGPU(PPM_IMG img_in)
 PPM_IMG yuv2rgbGPU(YUV_IMG img_in)
 {
     PPM_IMG img_out;
-    //Put you CUDA setup code here.
+    
     img_out.w = img_in.w;
     img_out.h = img_in.h;
 
@@ -196,7 +204,7 @@ PPM_IMG yuv2rgbGPU(YUV_IMG img_in)
     img_out.img_g = (unsigned char *)malloc(sizeof(unsigned char)*img_out.w*img_out.h);
     img_out.img_b = (unsigned char *)malloc(sizeof(unsigned char)*img_out.w*img_out.h);
 
-    // AM: Allocate memory for the PPM_IMG & YUV_IMG on the device
+    // Allocate memory for the PPM_IMG & YUV_IMG on the device
     unsigned char * img_r_d;
     unsigned char * img_g_d;
     unsigned char * img_b_d;
@@ -226,7 +234,7 @@ PPM_IMG yuv2rgbGPU(YUV_IMG img_in)
 
 
     int N = img_in.w*img_in.h;
-    int M = 8;
+    int M = 512;
 
     cudaMemcpy(N_d, &N, sizeof(int), cudaMemcpyHostToDevice);
 

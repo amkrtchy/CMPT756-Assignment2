@@ -37,12 +37,14 @@ void run_gpu_color_test(PPM_IMG img_in)
 
   
     printf("Starting GPU processing...\n");
-    
+
+
+    // Test for the copy to device and back
     launchEmptyKernel();
     sdkCreateTimer(&timer);
     sdkStartTimer(&timer);
 
-    copyToDevice(img_in); //copy to device
+    copyToDevice(img_in); 
     sdkStopTimer(&timer);
 
     printf("Copy PPM to device: %f (ms)\n", sdkGetTimerValue(&timer));
@@ -58,7 +60,8 @@ void run_gpu_color_test(PPM_IMG img_in)
     printf("Copy PPM to device and back: %f (ms)\n", sdkGetTimerValue(&timer));
     sdkDeleteTimer(&timer);
     
-
+ 
+    // Test for RGB 2 YUV GPU conversion
     sdkCreateTimer(&timer);
     sdkStartTimer(&timer);
 
@@ -68,8 +71,11 @@ void run_gpu_color_test(PPM_IMG img_in)
     printf("RGB to YUV conversion time(GPU): %f (ms)\n", sdkGetTimerValue(&timer));
     sdkDeleteTimer(&timer);
 
+    // Is Conversion ok? Note, there can be small differencein pixel values due to different rounding mechanisms
     printf("Is my GPU to YUV correct? %d\n", confirm_gpu_rgb2yuv(img_obuf_yuv, img_in));
 
+
+    // Test for RGB 2 YUV GPU conversion
     sdkCreateTimer(&timer);
     sdkStartTimer(&timer);
 	
@@ -79,14 +85,15 @@ void run_gpu_color_test(PPM_IMG img_in)
     printf("YUV to RGB conversion time(GPU): %f (ms)\n", sdkGetTimerValue(&timer));
     sdkDeleteTimer(&timer);  
 
+    // Is Conversion ok? Note, there can be small differencein pixel values due to different rounding mechanisms
     printf("Is my YUV to GPU correct? %d\n", confirm_gpu_yuv2rgb(img_obuf_rgb, img_in));  
 
 
     write_yuv(img_obuf_yuv, "out_yuv_gpu.yuv");
     write_ppm(img_obuf_rgb, "out_rgb_gpu.ppm");
     
-   free_ppm(img_obuf_rgb); //Uncomment these when the images exist
-   free_yuv(img_obuf_yuv);
+    free_ppm(img_obuf_rgb); //Uncomment these when the images exist
+    free_yuv(img_obuf_yuv);
 
 }
 
@@ -121,13 +128,14 @@ void run_cpu_color_test(PPM_IMG img_in)
     sdkDeleteTimer(&timer);    
 
 
-    //write_yuv(img_obuf_yuv, "out_yuv_cpu.yuv");
-    //write_ppm(img_obuf_rgb, "out_rgb_cpu.ppm");
+    write_yuv(img_obuf_yuv, "out_yuv_cpu.yuv");
+    write_ppm(img_obuf_rgb, "out_rgb_cpu.ppm");
     
     free_ppm(img_obuf_rgb);
     free_yuv(img_obuf_yuv);
     
 }
+
 // There could be a minor differente and it is OK
 //https://stackoverflow.com/questions/14406364/different-results-for-cuda-addition-on-host-and-on-gpu
 bool confirm_gpu_rgb2yuv(YUV_IMG img_gpu, PPM_IMG img) //Place code here that verifies your conversion
@@ -162,6 +170,7 @@ bool confirm_gpu_rgb2yuv(YUV_IMG img_gpu, PPM_IMG img) //Place code here that ve
     return true;
         
 }
+
 // There could be a minor differente and it is OK
 //https://stackoverflow.com/questions/14406364/different-results-for-cuda-addition-on-host-and-on-gpu
 
