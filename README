@@ -36,8 +36,56 @@ COMPILE AND RUN
 
 
 -------------------
-EXPERIEMTNS & TIMES
+EXPERIEMT RESULTS
 -------------------
+
+***Times to copy image to and from device
+
+   1) Copy image from host to device
+      small image: 0.53ms
+      large image: 20.98ms
+
+   2) Copy image from host to device and from device to host
+      small image:  0.928ms
+      large image:  49.12ms
+
+***Time to copy image to device without initial empty kernel launch
+
+   small image: 106.71ms
+   large image: 115.81ms
+
+
+*** Try different threads per blocks M (due to our implementation block sizes are atuomatically extracted to span entire image)
+   
+   Data for small image (times in ms):
+
+   		M = 1:    RBG->YUV = 15.14, YUV -> RGB = 9.56
+   		M = 8:    RGB->YUV = 3.54, YUV -> RGB = 2.96
+   		M = 16:   RGB->YUV = 2.78, YUV -> RGB = 2.46
+   		M = 32:   RGB->YUV = 2.39, YUV -> RGB = 2.22
+   		M = 64:   RGB->YUV = 2.40, YUV -> RGB = 2.23
+   		M = 128:  RGB->YUV = 2.48, YUV -> RGB = 2.26
+   		M = 256:  RGB->YUV = 2.40, YUV -> RGB = 2.28
+   		M = 512:  RGB->YUV = 2.39, YUV -> RGB = 2.28
+   		M = 1024: RGB->YUV = 2.40, YUV -> RGB = 2.25 
+   		M = 1025: No proper processing for image (limit of threads per block is 1024!)
+
+   	Data for large image (times in ms):
+
+   	    M = 1:    RGB->YUV = 1044.69ms, YUV -> RGB = 610.16ms
+   	    M = 8:    RGB->YUV = 219.61, YUV -> RGB = 148.10
+   	    M = 16:   RGB->YUV = 160.09, YUV -> RGB = 108.24
+   	    M = 32:   RGB->YUV = 97.70, YUV -> RGB = 84.93
+   	    M = 64:   RGB->YUV = 111.66, YUV -> RGB = 89.18
+   	    M = 128:  RGB->YUV = 110.63, YUV -> RGB = 88.77
+   	    M = 256:  RGB->YUV = 110.29, YUV -> RGB = 88.76
+   	    M = 512:  RGB->YUV = 109.24, YUV -> RGB = 96.03
+   	    M = 1024: RGB->YUV = 109.00, YUV -> RGB = 89.02
+   	    M = 1025: No proper processing for image (limit of threads per block is 1024!)
+
+
+CPU processing times for small image are RBG->YUV = 31.71ms and YUV->RGB = 11.16ms
+CPU processing times for large image are RGB->YUV = 1610.69ms and YUV -> RGB = 1015.02ms
 
 
 
