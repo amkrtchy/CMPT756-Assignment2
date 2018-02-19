@@ -3,79 +3,76 @@
 #include <stdlib.h>
 #include "colour-convert.h"
 
+
 // AM: empy kernel to fire up GPU
-__global__ void empyKernel(void) {
+__global__ void emptyKernel(void) {
 
 }
 
-__global__ void rgb2yuvKernel(unsigned char *r, unsigned char *g, unsigned char *b, unsigned char *y, unsigned char *u, unsigned char *v) {
+__global__ void rgb2yuvKernel(unsigned char *r, unsigned char *g, unsigned char *b, unsigned char *y, 
+                              unsigned char *u, unsigned char *v, int *n) {
 
+        int ind = threadIdx.x + blockIdx.x*blockDim.x;
         unsigned char ny, cb, cr;
+    
+        if (ind < *n) {
+            ny  = (unsigned char)( 0.299*r[ind] + 0.587*g[ind] +  0.114*b[ind]);
+            cb = (unsigned char)(-0.169*r[ind] - 0.331*g[ind] +  0.499*b[ind] + 128);
+            cr = (unsigned char)( 0.499*r[ind] - 0.418*g[ind] - 0.0813*b[ind] + 128);
 
-        // ny  = (unsigned char)(__fadd_rn(__fadd_rn(__fmul_rn(0.299, r[blockIdx.x]),
-        //                        __fmul_rn(0.587, g[blockIdx.x])), 
-        //                        __fmul_rn(0.114, b[blockIdx.x])));
-
-        // cb = (unsigned char)(__fadd_rn(__fadd_rn(__fadd_rn(__fmul_rn(-0.169, r[blockIdx.x]),
-        //                        __fmul_rn(-0.331, g[blockIdx.x])), 
-        //                        __fmul_rn(0.499, b[blockIdx.x])), 128));
-
-        // cr = (unsigned char) (__fadd_rn(__fadd_rn(__fadd_rn(__fmul_rn(0.499, r[blockIdx.x]),
-        //                        __fmul_rn(-0.418, g[blockIdx.x])), 
-        //                        __fmul_rn(-0.0813, b[blockIdx.x])), 128));
-
-        
-        
-        ny  = (unsigned char)( 0.299*r[blockIdx.x] + 0.587*g[blockIdx.x] +  0.114*b[blockIdx.x]);
-        cb = (unsigned char)(-0.169*r[blockIdx.x] - 0.331*g[blockIdx.x] +  0.499*b[blockIdx.x] + 128);
-        cr = (unsigned char)( 0.499*r[blockIdx.x] - 0.418*g[blockIdx.x] - 0.0813*b[blockIdx.x] + 128);
-
-        y[blockIdx.x]  = ny;
-        u[blockIdx.x] = cb;
-        v[blockIdx.x] = cr;
+            y[ind]  = ny;
+            u[ind] = cb;
+            v[ind] = cr;
+        }
 
 }
 
-__global__ void yuv2rgbKernel(unsigned char *r, unsigned char *g, unsigned char *b, unsigned char *y, unsigned char *u, unsigned char *v) {
+__global__ void yuv2rgbKernel(unsigned char *r, unsigned char *g, unsigned char *b, 
+                              unsigned char *y, unsigned char *u, unsigned char *v, int *n) {
+
+         
+        int ind = threadIdx.x + blockIdx.x*blockDim.x;
+
+        if (ind < *n) {
+            int ny  = (int)y[ind];
+            int cb = (int)u[ind] - 128;
+            int cr = (int)v[ind] - 128;
+            
+            int rt  = (int)(ny + 1.402*cr); 
+            int gt = (int)(ny - 0.344*cb - 0.714*cr);
+            int bt  = (int)(ny + 1.772*cb);
 
 
-        int ny  = (int)y[blockIdx.x];
-        int cb = (int)u[blockIdx.x] - 128;
-        int cr = (int)v[blockIdx.x] - 128;
-        
-        int rt  = (int)(ny + 1.402*cr); 
-        int gt = (int)(ny - 0.344*cb - 0.714*cr);
-        int bt  = (int)(ny + 1.772*cb);
+            rt = (rt < 255) ? rt: 255;
+            rt  = (rt > 0) ? rt: 0;
 
-        r[blockIdx.x] = (rt < 255) ? rt: 255;
-        r[blockIdx.x]  = (rt > 0) ? rt: 0;
+            gt = (gt < 255) ? gt: 255;
+            gt = (gt > 0) ? gt : 0;
 
-        //g[blockIdx.x] = (int)( y[blockIdx.x] - 0.344*u[blockIdx.x] - 0.714*v[blockIdx.x]); 
-        g[blockIdx.x] = (gt < 255) ? gt: 255;
-        g[blockIdx.x] = (gt > 0) ? gt : 0;
+            bt = (bt < 255 )? bt: 255;
+            bt = (bt > 0) ? bt : 0; 
 
-        //b[blockIdx.x] = (int)(y[blockIdx.x]+ 1.772*u[blockIdx.x]);
-        b[blockIdx.x] = (bt < 255 )? bt: 255;
-        b[blockIdx.x] = (bt > 0) ? bt : 0;
+            r[ind] = rt;
+            g[ind] = gt;
+            b[ind] = bt;
+        }
 
 }
 
+void launchEmptyKernel() {
+
+    emptyKernel<<<1, 1>>>();
+}
 
 // AM copy image to device
 
 void copyToDevice(PPM_IMG img_in) { 
     
-
-
-}
-
-void copyToHost(PPM_IMG img_in) { 
-    
+ // AM: Allocate memory for the PPM_IMG & YUV_IMG on the device
     unsigned char * img_r_d;
     unsigned char * img_g_d;
     unsigned char * img_b_d;
 
-    // AM: Allocate memory for the PPM_IMG struct on the device
     int size = img_in.w * img_in.h * sizeof(unsigned char);
    
     cudaMalloc((void **) &img_r_d, size);
@@ -83,6 +80,40 @@ void copyToHost(PPM_IMG img_in) {
     cudaMalloc((void **) &img_b_d, size);
 
 
+    // Copy PPM to device                           
+    cudaMemcpy(img_r_d, img_in.img_r, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(img_g_d, img_in.img_g, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(img_b_d, img_in.img_b, size, cudaMemcpyHostToDevice);
+
+}
+
+void copyToDeviceAndBack(PPM_IMG img_in) { 
+    // AM: Allocate memory for the PPM_IMG & YUV_IMG on the device
+    unsigned char * img_r_d;
+    unsigned char * img_g_d;
+    unsigned char * img_b_d;
+
+
+    int size = img_in.w * img_in.h * sizeof(unsigned char);
+   
+    cudaMalloc((void **) &img_r_d, size);
+    cudaMalloc((void **) &img_g_d, size);
+    cudaMalloc((void **) &img_b_d, size);
+
+
+    // Copy PPM to device                           
+    cudaMemcpy(img_r_d, img_in.img_r, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(img_g_d, img_in.img_g, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(img_b_d, img_in.img_b, size, cudaMemcpyHostToDevice);
+
+    // Copy from device to host                      
+    cudaMemcpy(img_in.img_r, img_r_d, size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(img_in.img_g, img_g_d, size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(img_in.img_b, img_b_d, size, cudaMemcpyDeviceToHost);
+
+    cudaFree(img_r_d);
+    cudaFree(img_g_d);
+    cudaFree(img_b_d);
 
 }
 
@@ -108,6 +139,8 @@ YUV_IMG rgb2yuvGPU(PPM_IMG img_in)
     unsigned char * img_u_d;
     unsigned char * img_v_d;
 
+    int * N_d;
+
     int size = img_in.w * img_in.h * sizeof(unsigned char);
    
     cudaMalloc((void **) &img_r_d, size);
@@ -117,6 +150,7 @@ YUV_IMG rgb2yuvGPU(PPM_IMG img_in)
     cudaMalloc((void **) &img_y_d, size);
     cudaMalloc((void **) &img_u_d, size);
     cudaMalloc((void **) &img_v_d, size);
+    cudaMalloc((void **) &N_d, sizeof(int));
 
 
     // Copy PPM to device                           
@@ -124,13 +158,26 @@ YUV_IMG rgb2yuvGPU(PPM_IMG img_in)
     cudaMemcpy(img_g_d, img_in.img_g, size, cudaMemcpyHostToDevice);
     cudaMemcpy(img_b_d, img_in.img_b, size, cudaMemcpyHostToDevice);
 
+    int N = img_in.w*img_in.h;
+    int M = 8;
 
-    rgb2yuvKernel<<<img_in.w*img_in.h, 1>>>(img_r_d, img_g_d, img_b_d, img_y_d, img_u_d, img_v_d);//Launch the Kernel
+    cudaMemcpy(N_d, &N, sizeof(int), cudaMemcpyHostToDevice);
+
+
+    rgb2yuvKernel<<<(N+M-1)/M,M>>>(img_r_d, img_g_d, img_b_d, img_y_d, img_u_d, img_v_d, N_d);//Launch the Kernel
 
     // Copy from device to host                      
     cudaMemcpy(img_out.img_y, img_y_d, size, cudaMemcpyDeviceToHost);
     cudaMemcpy(img_out.img_u, img_u_d, size, cudaMemcpyDeviceToHost);
     cudaMemcpy(img_out.img_v, img_v_d, size, cudaMemcpyDeviceToHost);
+
+    cudaFree(img_r_d);
+    cudaFree(img_g_d);
+    cudaFree(img_b_d);
+
+    cudaFree(img_y_d);
+    cudaFree(img_u_d);
+    cudaFree(img_v_d);
 
 
     return img_out;
@@ -158,6 +205,8 @@ PPM_IMG yuv2rgbGPU(YUV_IMG img_in)
     unsigned char * img_u_d;
     unsigned char * img_v_d;
 
+    int * N_d;
+
     int size = img_in.w * img_in.h * sizeof(unsigned char);
    
     cudaMalloc((void **) &img_r_d, size);
@@ -167,6 +216,7 @@ PPM_IMG yuv2rgbGPU(YUV_IMG img_in)
     cudaMalloc((void **) &img_y_d, size);
     cudaMalloc((void **) &img_u_d, size);
     cudaMalloc((void **) &img_v_d, size);
+    cudaMalloc((void **) &N_d, sizeof(int));
 
 
     // Copy YUV to device                           
@@ -174,13 +224,27 @@ PPM_IMG yuv2rgbGPU(YUV_IMG img_in)
     cudaMemcpy(img_u_d, img_in.img_u, size, cudaMemcpyHostToDevice);
     cudaMemcpy(img_v_d, img_in.img_v, size, cudaMemcpyHostToDevice);
 
-    yuv2rgbKernel<<<img_in.w*img_in.h, 1>>>(img_r_d, img_g_d, img_b_d, img_y_d, img_u_d, img_v_d);//Launch the Kernel
 
+    int N = img_in.w*img_in.h;
+    int M = 8;
+
+    cudaMemcpy(N_d, &N, sizeof(int), cudaMemcpyHostToDevice);
+
+    yuv2rgbKernel<<<(N+M-1)/M,M>>>(img_r_d, img_g_d, img_b_d, img_y_d, img_u_d, img_v_d, N_d);//Launch the Kernel
+    
 
     // Copy from device to host                      
     cudaMemcpy(img_out.img_r, img_r_d, size, cudaMemcpyDeviceToHost);
     cudaMemcpy(img_out.img_g, img_g_d, size, cudaMemcpyDeviceToHost);
     cudaMemcpy(img_out.img_b, img_b_d, size, cudaMemcpyDeviceToHost);
+
+    cudaFree(img_r_d);
+    cudaFree(img_g_d);
+    cudaFree(img_b_d);
+
+    cudaFree(img_y_d);
+    cudaFree(img_u_d);
+    cudaFree(img_v_d);
 
 
     return img_out;

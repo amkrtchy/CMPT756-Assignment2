@@ -25,6 +25,9 @@ void write_yuv(YUV_IMG img,const char * path);
 void free_ppm(PPM_IMG img);
 void free_yuv(YUV_IMG img);
 
+void launchEmptyKernel();
+void copyToDevice(PPM_IMG img);
+void copyToDeviceAndBack(PPM_IMG img);
 YUV_IMG rgb2yuv(PPM_IMG img_in);
 PPM_IMG yuv2rgb(YUV_IMG img_in);    
 

@@ -35,17 +35,27 @@ void run_gpu_color_test(PPM_IMG img_in)
     YUV_IMG img_obuf_yuv;
 
 
-
   
     printf("Starting GPU processing...\n");
+    
+    launchEmptyKernel();
+    sdkCreateTimer(&timer);
+    sdkStartTimer(&timer);
+
+    copyToDevice(img_in); //copy to device
+    sdkStopTimer(&timer);
+
+    printf("Copy PPM to device: %f (ms)\n", sdkGetTimerValue(&timer));
+    sdkDeleteTimer(&timer);
+
 
     sdkCreateTimer(&timer);
     sdkStartTimer(&timer);
 
-
+    copyToDeviceAndBack(img_in); //copy to device
     sdkStopTimer(&timer);
 
-    printf("Copy PPM to device: %f (ms)\n", sdkGetTimerValue(&timer));
+    printf("Copy PPM to device and back: %f (ms)\n", sdkGetTimerValue(&timer));
     sdkDeleteTimer(&timer);
     
 
@@ -75,7 +85,7 @@ void run_gpu_color_test(PPM_IMG img_in)
     write_yuv(img_obuf_yuv, "out_yuv_gpu.yuv");
     write_ppm(img_obuf_rgb, "out_rgb_gpu.ppm");
     
-   //free_ppm(img_obuf_rgb); //Uncomment these when the images exist
+   free_ppm(img_obuf_rgb); //Uncomment these when the images exist
    free_yuv(img_obuf_yuv);
 
 }
@@ -111,49 +121,76 @@ void run_cpu_color_test(PPM_IMG img_in)
     sdkDeleteTimer(&timer);    
 
 
-    write_yuv(img_obuf_yuv, "out_yuv_cpu.yuv");
-    write_ppm(img_obuf_rgb, "out_rgb_cpu.ppm");
+    //write_yuv(img_obuf_yuv, "out_yuv_cpu.yuv");
+    //write_ppm(img_obuf_rgb, "out_rgb_cpu.ppm");
     
     free_ppm(img_obuf_rgb);
     free_yuv(img_obuf_yuv);
     
 }
-
+// There could be a minor differente and it is OK
+//https://stackoverflow.com/questions/14406364/different-results-for-cuda-addition-on-host-and-on-gpu
 bool confirm_gpu_rgb2yuv(YUV_IMG img_gpu, PPM_IMG img) //Place code here that verifies your conversion
 {
     YUV_IMG img_cpu = rgb2yuv(img);
+    int max_diff = 0;
+    
     for(int i=0; i<img_gpu.w*img_gpu.h; i++){
-            if(abs((int)img_gpu.img_y[i]-(int)img_cpu.img_y[i])>1){
-               printf("index, img_gpu.img_y, img_cpu.img_y %i, %i, %i\n", i, img_gpu.img_y[i], img_cpu.img_y[i]);
-               //return false;
+    	 if((int)img_gpu.img_y[i] != (int)img_cpu.img_y[i]){
+            	if(abs((int)img_gpu.img_y[i] - (int)img_cpu.img_y[i]) > max_diff) {
+            		max_diff = abs((int)img_gpu.img_y[i] - (int)img_cpu.img_y[i]);
+            	}
+             
             }
-            if(abs((int)img_gpu.img_u[i]-(int)img_cpu.img_u[i])>1){
-            	printf("index, img_gpu.img_u, img_cpu.img_u %i, %i, %i\n", i, img_gpu.img_u[i], img_cpu.img_u[i]);
-                //return false;
+         if((int)img_gpu.img_u[i] != (int)img_cpu.img_u[i]){
+            	if(abs((int)img_gpu.img_u[i] - (int)img_cpu.img_u[i]) > max_diff) {
+            		max_diff = abs((int)img_gpu.img_u[i] - (int)img_cpu.img_u[i]);
+            	}
+             
             }
-            if(abs((int)img_gpu.img_v[i]-(int)img_cpu.img_v[i])>1){
-            	printf("index, img_gpu.img_v, img_cpu.img_v %i, %i, %i\n", i, img_gpu.img_v[i], img_cpu.img_v[i]);
-                //return false;
+         if((int)img_gpu.img_v[i] != (int)img_cpu.img_v[i]){
+            	if(abs((int)img_gpu.img_v[i] - (int)img_cpu.img_v[i]) > max_diff) {
+            		max_diff = abs((int)img_gpu.img_v[i] - (int)img_cpu.img_v[i]);
+            	}
+             
             }
     }
-        
+    if (max_diff > 0) {
+    	printf("Maximum difference between pixels is %i\n", max_diff);
+    	return false;
+    }
     return true;
+        
 }
+// There could be a minor differente and it is OK
+//https://stackoverflow.com/questions/14406364/different-results-for-cuda-addition-on-host-and-on-gpu
+
 bool confirm_gpu_yuv2rgb(PPM_IMG img_gpu, PPM_IMG img_in) //Place code here that verifies your conversion
 {
+	int max_diff = 0;
+
     for(int i=0; i<img_gpu.w*img_gpu.h; i++){
-            if(abs((int)img_gpu.img_r[i]-(int)img_in.img_r[i])>1){
-             //printf("index, img_gpu.img_r, img_cpu.img_r %i, %i, %i\n", i, img_gpu.img_r[i], img_in.img_r[i]);
-             //return false;
+    	if((int)img_gpu.img_r[i] != (int)img_in.img_r[i]){
+            	if(abs((int)img_gpu.img_r[i] - (int)img_in.img_r[i]) >= max_diff) {
+            		max_diff = abs((int)img_gpu.img_r[i] - (int)img_in.img_r[i]);
+            	}
+             
             }
-            if(abs((int)img_gpu.img_g[i]-(int)img_in.img_g[i])>1){
-             // printf("index, img_gpu.img_g, img_cpu.img_g %i, %i, %i\n", i, img_gpu.img_g[i], img_in.img_g[i]);
-             //return false;
+             if((int)img_gpu.img_g[i] != (int)img_in.img_g[i]){
+            	if(abs((int)img_gpu.img_g[i] - (int)img_in.img_g[i]) >= max_diff) {
+            		max_diff = abs((int)img_gpu.img_g[i] - (int)img_in.img_g[i]);
+             }
             }
-            if(abs((int)img_gpu.img_b[i]-(int)img_in.img_b[i])>1){
-              //printf("index, img_gpu.img_r, img_cpu.img_r %i, %i, %i\n", i, img_gpu.img_b[i], img_in.img_b[i]);
-             //return false;
-            }
+             if((int)img_gpu.img_b[i] != (int)img_in.img_b[i]){
+            	if(abs((int)img_gpu.img_b[i] - (int)img_in.img_b[i]) >= max_diff) {
+            		max_diff = abs((int)img_gpu.img_b[i] - (int)img_in.img_b[i]);
+             }
+           }
+    }
+    if (max_diff > 0)
+    {
+    	printf("Maximum difference between pixels is %i\n", max_diff);
+    	return false;
     }
     return true;
 }
